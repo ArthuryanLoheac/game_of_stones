@@ -11,4 +11,3 @@ unit_tests
 *.d
 obj/
 build
-game_of_stones
