@@ -22,6 +22,8 @@ class Node:
             raise ValueError("Cannot be friend with himself")
         if (friend not in self.friends):
             self.friends.append(friend)
+        if (self not in friend.friends):
+            friend.friends.append(self)
 
     def add_conspiration(self, conspiration: str):
         if (conspiration.name == self.name):
