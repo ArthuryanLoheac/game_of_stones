@@ -2,3 +2,35 @@
 
 import sys
 import math
+import argparse
+
+def main() -> int:
+    # Initialize the parser with custom usage
+    parser = argparse.ArgumentParser(
+        usage='./game_of_stones [--links FR P1 P2 | --plots FR CR n]',
+        description='Game of Stones command line tool'
+    )
+    # Create a mutually exclusive group
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--links', nargs=3, metavar=('FR', 'P1', 'P2'),
+                       help='FR: file containing friendship relations, P1: person one, P2: person two')
+    group.add_argument('--plots', nargs=3, metavar=('FR', 'CR', 'n'),
+                       help='FR: file with friendship relations, CR: file with conspiracies intentions, n: maximum length of friendship paths')
+
+    args = parser.parse_args()
+    # Process arguments based on the used option
+    if args.links:
+        fr, p1, p2 = args.links
+        print(f"Links mode: FR={fr}, P1={p1}, P2={p2}")
+    elif args.plots:
+        fr, cr, n = args.plots
+        print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
+    return 0
+
+if __name__ == '__main__':
+    try:
+        main()
+        sys.exit(0)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(84)
