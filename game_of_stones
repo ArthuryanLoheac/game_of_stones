@@ -4,6 +4,22 @@ import sys
 import math
 import argparse
 
+def read_file(file: str) -> list:
+    try:
+        with open(file, 'r') as f:
+            return f.readlines()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File {file} not found")
+
+def links(fr: str, p1: str, p2: str):
+    friends_list = read_file(fr)
+    print(f"Links mode: FR={fr}, P1={p1}, P2={p2}")
+
+def plots(fr: str, cr: str, n: int):
+    friends_list = read_file(fr)
+    conspiracies_list = read_file(cr)
+    print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
+
 def main() -> int:
     # Initialize the parser with custom usage
     parser = argparse.ArgumentParser(
@@ -21,10 +37,14 @@ def main() -> int:
     # Process arguments based on the used option
     if args.links:
         fr, p1, p2 = args.links
-        print(f"Links mode: FR={fr}, P1={p1}, P2={p2}")
-    elif args.plots:
+        links(fr, p1, p2)
+
+    if args.plots:
         fr, cr, n = args.plots
-        print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
+        if not n.isdigit() or int(n) <= 0:
+            raise ValueError("n must be a positive number")
+        plots(fr, cr, int(n))
+
     return 0
 
 if __name__ == '__main__':
