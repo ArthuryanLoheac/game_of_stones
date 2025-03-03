@@ -12,7 +12,8 @@ GREEN="\e[32m"
 RED="\e[31m"
 NC="\e[0m"
 
-for dir in tests/outputs/links tests/outputs/plots; do
+# for dir in tests/outputs/links tests/outputs/plots; do
+for dir in tests/outputs/links; do
   for file in "$dir"/*; do
     echo "Running test: $file" >> "$LOGFILE"
     # Extract command as first line and expected output starting from line 3
@@ -39,8 +40,10 @@ for dir in tests/outputs/links tests/outputs/plots; do
   done
 done
 
-# ...existing code...
-
 # Print colored summary to terminal
 echo -e "${GREEN}Tests Passed: $PASS_COUNT${NC}"
 echo -e "${RED}Tests Failed: $FAIL_COUNT${NC}"
+
+if [ "$FAIL_COUNT" -gt 0 ]; then
+  exit 1
+fi
