@@ -4,6 +4,28 @@ import sys
 import math
 import argparse
 
+class Node:
+    name = ""
+    friends = []
+    conspiration = []
+
+    def __init__(self, name: str):
+        self.name = name
+        self.friends = []
+        self.conspiration = []
+
+    def add_friend(self, friend: str):
+        if (friend.name == self.name):
+            raise ValueError("Cannot be friend with himself")
+        if (friend not in self.friends):
+            self.friends.append(friend)
+
+    def add_conspiration(self, conspiration: str):
+        if (conspiration.name == self.name):
+            raise ValueError("Cannot be conspiration with himself")
+        if (conspiration not in self.conspiration):
+            self.conspiration.append(conspiration)
+
 def read_file(file: str) -> list:
     try:
         with open(file, 'r') as f:
