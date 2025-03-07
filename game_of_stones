@@ -1,8 +1,81 @@
 #!/usr/bin/python3
 
+from collections import deque
 import sys
 import math
 import argparse
+
+# ========== Classes ==========
+
+class Node:
+    name = ""
+    friends = []
+    conspiration = []
+
+    def __init__(self, name: str):
+        self.name = name
+        self.friends = []
+        self.conspiration = []
+
+    def add_friend(self, friend: str):
+        if (friend.name == self.name):
+            raise ValueError("Cannot be friend with himself")
+        if (friend not in self.friends):
+            self.friends.append(friend)
+        if (self not in friend.friends):
+            friend.friends.append(self)
+
+    def add_conspiration(self, conspiration: str):
+        if (conspiration.name == self.name):
+            raise ValueError("Cannot be conspiration with himself")
+        if (conspiration not in self.conspiration):
+            self.conspiration.append(conspiration)
+
+class Graph:
+    nodes = []
+    QueenNode = None
+
+    def __init__(self):
+        self.nodes = []
+
+    def add_node(self, node: Node):
+        if (node not in self.nodes):
+            self.nodes.append(node)
+        else:
+            raise ValueError("Node already exists")
+    
+    def add_queen(self, node: Node):
+        if (self.QueenNode is not None):
+            raise ValueError("Queen already exists")
+        self.QueenNode = node
+        self.add_node(node)
+    
+    def find_node(self, name: str) -> Node:
+        for node in self.nodes:
+            if (node.name == name):
+                return node
+        raise ValueError(f"Node {name} not found")
+    
+    def compute_dist(self, start : Node, end : Node):
+        i = 0;
+        lll = [(start, 0)]
+        visited = [start]
+
+        if (start == end):
+            return 0
+        while (len(lll) - 1 <= i):
+            for node in lll[i][0].friends:
+                if (node == end):
+                    return i + 1
+                if (node not in visited):
+                    lll.append((node, 1))
+                    visited.append(node)
+            i += 1
+        return -1
+
+        
+
+# ========== Functions ==========
 
 def read_file(file: str) -> list:
     try:
@@ -19,6 +92,8 @@ def plots(fr: str, cr: str, n: int):
     friends_list = read_file(fr)
     conspiracies_list = read_file(cr)
     print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
+
+# ========== Main ==========
 
 def main() -> int:
     # Initialize the parser with custom usage
