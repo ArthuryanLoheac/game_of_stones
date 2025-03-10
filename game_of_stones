@@ -4,6 +4,7 @@ from collections import deque
 import sys
 import math
 import argparse
+import re
 
 # ========== Classes ==========
 
@@ -74,8 +75,14 @@ class Graph:
         return -1
 
         
-
 # ========== Functions ==========
+
+def is_valid_format(line):
+    pattern = r'^(\S.*) is friends with (\S.*)$'
+    match = re.match(pattern, line)
+    if match:
+        return [match.group(1).strip(), match.group(2).strip()]
+    return None
 
 def read_file(file: str) -> list:
     try:
@@ -84,9 +91,33 @@ def read_file(file: str) -> list:
     except FileNotFoundError:
         raise FileNotFoundError(f"File {file} not found")
 
-def links(fr: str, p1: str, p2: str):
+def getListPairFriend(friends_list):
+    l = []
+    for line in friends_list:
+        a = is_valid_format(line)
+        if a is not None:
+            l.append(a)
+        else:
+            raise ValueError(f"Invalid format in file")
+    return l
+
+def findOrCreate(graph: Graph, name: str):
+    try:
+        return graph.find_node(name)
+    except ValueError:
+        node = Node(name)
+        graph.add_node(node)
+        return node
+
+def links(fr: str, p1: str, p2: str, graph: Graph):
     friends_list = read_file(fr)
-    print(f"Links mode: FR={fr}, P1={p1}, P2={p2}")
+    listPairs = getListPairFriend(friends_list)
+    n1 = None
+    n2 = None
+    for pair in listPairs:
+        n1 = findOrCreate(graph, pair[0])
+        n2 = findOrCreate(graph, pair[1])
+        n1.add_friend(n2)
 
 def plots(fr: str, cr: str, n: int):
     friends_list = read_file(fr)
@@ -107,12 +138,13 @@ def main() -> int:
                        help='FR: file containing friendship relations, P1: person one, P2: person two')
     group.add_argument('--plots', nargs=3, metavar=('FR', 'CR', 'n'),
                        help='FR: file with friendship relations, CR: file with conspiracies intentions, n: maximum length of friendship paths')
+    graph = Graph()
 
     args = parser.parse_args()
     # Process arguments based on the used option
     if args.links:
         fr, p1, p2 = args.links
-        links(fr, p1, p2)
+        links(fr, p1, p2, graph)
 
     if args.plots:
         fr, cr, n = args.plots
