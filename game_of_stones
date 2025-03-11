@@ -12,6 +12,7 @@ class Node:
     name = ""
     friends = []
     conspiration = []
+    depth = -1
 
     def __init__(self, name: str):
         self.name = name
@@ -55,24 +56,21 @@ class Graph:
         for node in self.nodes:
             if (node.name == name):
                 return node
-        raise ValueError(f"Node {name} not found")
+        return None
     
-    def compute_dist(self, start : Node, end : Node):
-        i = 0;
-        lll = [(start, 0)]
-        visited = [start]
-
+    def compute_dist(self, start : Node, end : Node, depth = 0) -> int:
+        if (start == end and depth == 0):
+            return depth
         if (start == end):
-            return 0
-        while (len(lll) - 1 <= i):
-            for node in lll[i][0].friends:
-                if (node == end):
-                    return i + 1
-                if (node not in visited):
-                    lll.append((node, 1))
-                    visited.append(node)
-            i += 1
-        return -1
+            return depth - 1
+        min_dist = math.inf
+        for friend in start.friends:
+            if (friend.depth == -1):
+                friend.depth = depth
+                dist = self.compute_dist(friend, end, depth + 1)
+                min_dist = min(min_dist, dist)
+        return min_dist
+        
 
         
 # ========== Functions ==========
@@ -102,12 +100,11 @@ def getListPairFriend(friends_list):
     return l
 
 def findOrCreate(graph: Graph, name: str):
-    try:
-        return graph.find_node(name)
-    except ValueError:
+    node = graph.find_node(name)
+    if (node is None):
         node = Node(name)
         graph.add_node(node)
-        return node
+    return node
 
 def links(fr: str, p1: str, p2: str, graph: Graph):
     friends_list = read_file(fr)
@@ -118,6 +115,12 @@ def links(fr: str, p1: str, p2: str, graph: Graph):
         n1 = findOrCreate(graph, pair[0])
         n2 = findOrCreate(graph, pair[1])
         n1.add_friend(n2)
+    NodeP1 = graph.find_node(p1)
+    NodeP2 = graph.find_node(p2)
+    dist = graph.compute_dist(NodeP1, NodeP2)
+    if (dist == math.inf):
+        dist = -1
+    print(f"Degree of separation between {p1} and {p2}: {dist}")
 
 def plots(fr: str, cr: str, n: int):
     friends_list = read_file(fr)
