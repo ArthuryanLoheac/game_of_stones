@@ -4,6 +4,7 @@ from collections import deque
 import sys
 import math
 import argparse
+import re
 
 # ========== Classes ==========
 
@@ -11,6 +12,7 @@ class Node:
     name = ""
     friends = []
     conspiration = []
+    depth = -1
 
     def __init__(self, name: str):
         self.name = name
@@ -54,28 +56,31 @@ class Graph:
         for node in self.nodes:
             if (node.name == name):
                 return node
-        raise ValueError(f"Node {name} not found")
+        return None
     
-    def compute_dist(self, start : Node, end : Node):
-        i = 0;
-        lll = [(start, 0)]
-        visited = [start]
-
+    def compute_dist(self, start : Node, end : Node, depth = 0) -> int:
+        if (start == end and depth == 0):
+            return depth
         if (start == end):
-            return 0
-        while (len(lll) - 1 <= i):
-            for node in lll[i][0].friends:
-                if (node == end):
-                    return i + 1
-                if (node not in visited):
-                    lll.append((node, 1))
-                    visited.append(node)
-            i += 1
-        return -1
-
+            return depth - 1
+        min_dist = math.inf
+        for friend in start.friends:
+            if (friend.depth == -1):
+                friend.depth = depth
+                dist = self.compute_dist(friend, end, depth + 1)
+                min_dist = min(min_dist, dist)
+        return min_dist
         
 
+        
 # ========== Functions ==========
+
+def is_valid_format(line):
+    pattern = r'^(\S.*) is friends with (\S.*)$'
+    match = re.match(pattern, line)
+    if match:
+        return [match.group(1).strip(), match.group(2).strip()]
+    return None
 
 def read_file(file: str) -> list:
     try:
@@ -84,9 +89,38 @@ def read_file(file: str) -> list:
     except FileNotFoundError:
         raise FileNotFoundError(f"File {file} not found")
 
-def links(fr: str, p1: str, p2: str):
+def getListPairFriend(friends_list):
+    l = []
+    for line in friends_list:
+        a = is_valid_format(line)
+        if a is not None:
+            l.append(a)
+        else:
+            raise ValueError(f"Invalid format in file")
+    return l
+
+def findOrCreate(graph: Graph, name: str):
+    node = graph.find_node(name)
+    if (node is None):
+        node = Node(name)
+        graph.add_node(node)
+    return node
+
+def links(fr: str, p1: str, p2: str, graph: Graph):
     friends_list = read_file(fr)
-    print(f"Links mode: FR={fr}, P1={p1}, P2={p2}")
+    listPairs = getListPairFriend(friends_list)
+    n1 = None
+    n2 = None
+    for pair in listPairs:
+        n1 = findOrCreate(graph, pair[0])
+        n2 = findOrCreate(graph, pair[1])
+        n1.add_friend(n2)
+    NodeP1 = graph.find_node(p1)
+    NodeP2 = graph.find_node(p2)
+    dist = graph.compute_dist(NodeP1, NodeP2)
+    if (dist == math.inf):
+        dist = -1
+    print(f"Degree of separation between {p1} and {p2}: {dist}")
 
 def plots(fr: str, cr: str, n: int):
     friends_list = read_file(fr)
@@ -107,12 +141,13 @@ def main() -> int:
                        help='FR: file containing friendship relations, P1: person one, P2: person two')
     group.add_argument('--plots', nargs=3, metavar=('FR', 'CR', 'n'),
                        help='FR: file with friendship relations, CR: file with conspiracies intentions, n: maximum length of friendship paths')
+    graph = Graph()
 
     args = parser.parse_args()
     # Process arguments based on the used option
     if args.links:
         fr, p1, p2 = args.links
-        links(fr, p1, p2)
+        links(fr, p1, p2, graph)
 
     if args.plots:
         fr, cr, n = args.plots
