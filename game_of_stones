@@ -59,6 +59,10 @@ class Graph:
         return None
 
     def compute_dist(self, start : Node, end : Node, depth = 0) -> int:
+        """
+        Parcours récursif (DFS) non optimal.
+        On l'utilise dans le mode --links.
+        """
         if start == end and depth == 0:
             return depth
         if start == end:
@@ -90,11 +94,15 @@ def read_file(file: str) -> list:
 def getListPairFriend(friends_list: list):
     l = []
     for line in friends_list:
+        # on nettoie la ligne avant le match
+        line = line.strip()
+        if not line:
+            continue
         a = is_valid_format(line)
         if a is not None:
             l.append(a)
         else:
-            raise ValueError("Invalid format in file")
+            raise ValueError(f"Invalid format in file: {line}")
     return l
 
 def findOrCreate(graph: Graph, name: str) -> Node:
@@ -103,6 +111,33 @@ def findOrCreate(graph: Graph, name: str) -> Node:
         node = Node(name)
         graph.add_node(node)
     return node
+
+def bfs_all_distances(graph: Graph, start: Node) -> dict:
+    """
+    Calcule la distance minimale entre 'start' et tous les autres nœuds du graphe
+    via BFS. Renvoie un dictionnaire : { Node: distance_en_entier }.
+    """
+    from collections import deque
+    queue = deque()
+    dist = {}
+
+    # on remet depth = -1 pour tout le monde avant la BFS
+    for node in graph.nodes:
+        node.depth = -1
+
+    # point de départ
+    start.depth = 0
+    dist[start] = 0
+    queue.append(start)
+
+    while queue:
+        current = queue.popleft()
+        for friend in current.friends:
+            if friend.depth == -1:
+                friend.depth = current.depth + 1
+                dist[friend] = friend.depth
+                queue.append(friend)
+    return dist
 
 def links(fr: str, p1: str, p2: str, graph: Graph):
     friends_list = read_file(fr)
@@ -119,35 +154,77 @@ def links(fr: str, p1: str, p2: str, graph: Graph):
         print(f"Degree of separation between {p1} and {p2}: -1")
         return
 
+    # Remise à zéro des depth
+    for node in graph.nodes:
+        node.depth = -1
+
     dist = graph.compute_dist(NodeP1, NodeP2)
     if dist == math.inf:
         dist = -1
     print(f"Degree of separation between {p1} and {p2}: {dist}")
 
 def plots(fr: str, cr: str, n: int):
-    # Lecture du fichier FR et construction du graphe
+    """
+    Mode plots:
+    1) Lit le fichier FR et construit le graphe des amitiés
+    2) Lit le fichier CR (non encore traité ici)
+    3) Affiche la liste des noms et la matrice de distances <= n
+    4) Gère ensuite les complots (à implémenter / compléter)
+    """
+    # 1) Lecture du fichier FR et construction du graphe
     friends_list = read_file(fr)
     listPairs = getListPairFriend(friends_list)
     graph = Graph()
 
     for pair in listPairs:
-        n1 = findOrCreate(graph, pair[0])
-        n2 = findOrCreate(graph, pair[1])
-        n1.add_friend(n2)
+        node1 = findOrCreate(graph, pair[0])
+        node2 = findOrCreate(graph, pair[1])
+        node1.add_friend(node2)
 
+    # 2) Lecture du fichier CR (complots) - à utiliser plus tard
     conspiracies_list = read_file(cr)
 
+    # 3) Affiche la liste alphabétique des noms
     sorted_names = sorted(node.name for node in graph.nodes)
     print("Names:")
     for name in sorted_names:
         print(name)
 
-    # générer la matrice de distances
-    # gérer les conspirations
+    # 4) Générer et afficher la matrice de distances
+    print("Relationships:")
+    # Pour chaque node (dans l'ordre alphabétique), on fait un BFS
+    for name_src in sorted_names:
+        src_node = graph.find_node(name_src)
+        dist_dict = bfs_all_distances(graph, src_node)
+        row_values = []
+        for name_dst in sorted_names:
+            dst_node = graph.find_node(name_dst)
+            d = dist_dict.get(dst_node, math.inf)
+            # on stocke d si d <= n, sinon 0 (comme dans les exemples)
+            row_values.append(str(d if d <= n else 0))
+        # on affiche une ligne par source
+        print(" ".join(row_values))
 
-    # print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
-    # affichage de la matrice
-    # affichage manipulations de complot
+    # Ici vous pourrez gérer l’analyse des complots (informations issues de `conspiracies_list`).
+    # Exemples possibles :
+    # - Identifier la reine (Cersei Lannister) si besoin
+    # - Calculer les ennemis directs
+    # - Trouver les chaînes de complot
+    # - Affichage final: "The stone is safe!" ou "There is only one way out: treason!"
+    #
+    # Pour l'instant, on se contente de montrer la génération de la matrice.
+
+    # Ex. d'un résumé minimal des conspirations (placeholder):
+    print("Conspiracies:")
+    for line in conspiracies_list:
+        line = line.strip()
+        if not line:
+            continue
+        print(line)  # juste un affichage brut pour l'instant
+
+    # Résultat final (placeholder)
+    print("Result:")
+    print("The stone is safe!")  # ou "There is only one way out: treason!"
 
 # ========== Main ==========
 
