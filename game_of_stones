@@ -125,9 +125,29 @@ def links(fr: str, p1: str, p2: str, graph: Graph):
     print(f"Degree of separation between {p1} and {p2}: {dist}")
 
 def plots(fr: str, cr: str, n: int):
+    # Lecture du fichier FR et construction du graphe
     friends_list = read_file(fr)
+    listPairs = getListPairFriend(friends_list)
+    graph = Graph()
+
+    for pair in listPairs:
+        n1 = findOrCreate(graph, pair[0])
+        n2 = findOrCreate(graph, pair[1])
+        n1.add_friend(n2)
+
     conspiracies_list = read_file(cr)
-    print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
+
+    sorted_names = sorted(node.name for node in graph.nodes)
+    print("Names:")
+    for name in sorted_names:
+        print(name)
+
+    # générer la matrice de distances
+    # gérer les conspirations
+
+    # print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
+    # affichage de la matrice
+    # affichage manipulations de complot
 
 # ========== Main ==========
 
