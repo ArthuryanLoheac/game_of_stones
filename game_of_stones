@@ -8,6 +8,26 @@ import re
 
 # ========== Classes ==========
 
+class ArgumentParser(argparse.ArgumentParser):    
+    def _get_action_from_name(self, name):
+        container = self._actions
+        if name is None:
+            return None
+        for action in container:
+            if '/'.join(action.option_strings) == name:
+                return action
+            elif action.metavar == name:
+                return action
+            elif action.dest == name:
+                return action
+
+    def error(self, message):
+        exc = sys.exc_info()[1]
+        if exc:
+            exc.argument = self._get_action_from_name(exc.argument_name)
+            raise exc
+        super(ArgumentParser, self).error(message)
+
 class Node:
     name = ""
     friends = []
@@ -154,7 +174,7 @@ def plots(fr: str, cr: str, n: int):
 
 def main() -> int:
     # Initialize the parser with custom usage
-    parser = argparse.ArgumentParser(
+    parser = ArgumentParser(
         usage='./game_of_stones [--links FR P1 P2 | --plots FR CR n]',
         description='Game of Stones command line tool'
     )
@@ -165,8 +185,11 @@ def main() -> int:
     group.add_argument('--plots', nargs=3, metavar=('FR', 'CR', 'n'),
                        help='FR: file with friendship relations, CR: file with conspiracies intentions, n: maximum length of friendship paths')
     graph = Graph()
-
-    args = parser.parse_args()
+    
+    try:
+        args = parser.parse_args()
+    except argparse.ArgumentError as e:
+        raise e
     # Process arguments based on the used option
     if args.links:
         fr, p1, p2 = args.links
