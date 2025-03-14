@@ -186,10 +186,7 @@ def main() -> int:
                        help='FR: file with friendship relations, CR: file with conspiracies intentions, n: maximum length of friendship paths')
     graph = Graph()
     
-    try:
-        args = parser.parse_args()
-    except argparse.ArgumentError as e:
-        raise e
+    args = parser.parse_args()
     # Process arguments based on the used option
     if args.links:
         fr, p1, p2 = args.links
