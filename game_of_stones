@@ -127,12 +127,12 @@ def links(fr: str, p1: str, p2: str, graph: Graph):
 def plots(fr: str, cr: str, n: int):
     # Lecture du fichier FR et construction du graphe
     friends_list = read_file(fr)
-    listPairs = getListPairFriend(friends_list)
+    listPairs = get_list_pair_friend(friends_list)
     graph = Graph()
 
     for pair in listPairs:
-        n1 = findOrCreate(graph, pair[0])
-        n2 = findOrCreate(graph, pair[1])
+        n1 = find_or_create(graph, pair[0])
+        n2 = find_or_create(graph, pair[1])
         n1.add_friend(n2)
 
     conspiracies_list = read_file(cr)
@@ -141,6 +141,7 @@ def plots(fr: str, cr: str, n: int):
     print("Names:")
     for name in sorted_names:
         print(name)
+    print()
 
     # générer la matrice de distances
     # gérer les conspirations
