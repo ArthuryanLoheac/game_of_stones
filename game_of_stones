@@ -126,6 +126,8 @@ def find_or_create(graph: Graph, name: str) -> Node:
 
 def links(fr: str, p1: str, p2: str, graph: Graph):
     friends_list = read_file(fr)
+    if len(friends_list) == 0:
+        raise ValueError("Empty file")
     listPairs = get_list_pair_friend(friends_list)
     # Construction du graphe à partir du FR
     for pair in listPairs:
@@ -147,6 +149,8 @@ def links(fr: str, p1: str, p2: str, graph: Graph):
 def plots(fr: str, cr: str, n: int):
     # Lecture du fichier FR et construction du graphe
     friends_list = read_file(fr)
+    if len(friends_list) == 0:
+        raise ValueError("Empty file")
     listPairs = get_list_pair_friend(friends_list)
     graph = Graph()
 
@@ -156,6 +160,8 @@ def plots(fr: str, cr: str, n: int):
         n1.add_friend(n2)
 
     conspiracies_list = read_file(cr)
+    if len(conspiracies_list) == 0:
+        raise ValueError("Empty file")
 
     sorted_names = sorted(node.name for node in graph.nodes)
     print("Names:")
@@ -173,6 +179,8 @@ def plots(fr: str, cr: str, n: int):
 # ========== Main ==========
 
 def main() -> int:
+    if (len(sys.argv) != 5):
+        raise ValueError("Invalid number of arguments")
     # Initialize the parser with custom usage
     parser = ArgumentParser(
         usage='./game_of_stones [--links FR P1 P2 | --plots FR CR n]',
