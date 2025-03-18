@@ -1,5 +1,7 @@
+./game_of_stones --plots ./tests/inputs/friends/complex.txt ./tests/inputs/plots/complex.txt 2
+############################################################################################################
 Names:
-Cersei
+Cersei Lannister
 Daenerys
 Jaime
 Missandei

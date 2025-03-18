@@ -1,3 +1,5 @@
+./game_of_stones --plots tests/inputs/friends/simple.txt tests/inputs/plots/simple.txt 2
+############################################################################################################
 Names:
 Cersei Lannister
 Daenerys
