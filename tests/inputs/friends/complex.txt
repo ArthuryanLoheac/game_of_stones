@@ -1,0 +1,7 @@
+Cersei Lannister is friends with Jaime
+Cersei Lannister is friends with Tyrion
+Jaime is friends with Tyrion
+Jaime is friends with Daenerys
+Tyrion is friends with Daenerys
+Jaime is friends with Missandei
+Daenerys is friends with Missandei
