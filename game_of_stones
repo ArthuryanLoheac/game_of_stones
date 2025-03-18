@@ -9,17 +9,19 @@ import re
 # ========== Classes ==========
 
 class Node:
-    name = ""
-    friends = []
-    conspiration = []
-    depth = -1
-
+    """
+    Représente un personnage, ses amis et ceux qu'il complote contre.
+    """
     def __init__(self, name: str):
         self.name = name
-        self.friends = []
-        self.conspiration = []
+        self.friends = []        # liste de Node
+        self.conspiration = []   # liste de Node
+        self.depth = -1          # utilisé pour BFS
 
     def add_friend(self, friend: 'Node'):
+        """
+        Ajoute une relation d'amitié bi-directionnelle.
+        """
         if friend.name == self.name:
             raise ValueError("Cannot be friend with himself")
         if friend not in self.friends:
@@ -28,17 +30,22 @@ class Node:
             friend.friends.append(self)
 
     def add_conspiration(self, conspiration: 'Node'):
+        """
+        Ajoute un complot (orienté).
+        """
         if conspiration.name == self.name:
             raise ValueError("Cannot be conspiration with himself")
         if conspiration not in self.conspiration:
             self.conspiration.append(conspiration)
 
-class Graph:
-    nodes = []
-    QueenNode = None
 
+class Graph:
+    """
+    Le graphe global : liste de Node et éventuelle référence à la reine.
+    """
     def __init__(self):
         self.nodes = []
+        self.QueenNode = None
 
     def add_node(self, node: Node):
         if node not in self.nodes:
@@ -53,31 +60,22 @@ class Graph:
         self.add_node(node)
 
     def find_node(self, name: str) -> Node:
+        """
+        Retourne le Node dont le nom est 'name', ou None si introuvable.
+        """
         for node in self.nodes:
             if node.name == name:
                 return node
         return None
 
-    def compute_dist(self, start : Node, end : Node, depth = 0) -> int:
-        """
-        Parcours récursif (DFS) non optimal.
-        On l'utilise dans le mode --links.
-        """
-        if start == end and depth == 0:
-            return depth
-        if start == end:
-            return depth - 1
-        min_dist = math.inf
-        for friend in start.friends:
-            if friend.depth == -1:
-                friend.depth = depth
-                dist = self.compute_dist(friend, end, depth + 1)
-                min_dist = min(min_dist, dist)
-        return min_dist
-
 # ========== Functions ==========
 
 def is_valid_format(line: str):
+    """
+    Vérifie si la ligne correspond au format:
+      "<quelqu'un> is friends with <quelqu'un d'autre>"
+    Retourne un tuple [str, str] ou None.
+    """
     pattern = r'^(\S.*) is friends with (\S.*)$'
     match = re.match(pattern, line)
     if match:
@@ -85,6 +83,10 @@ def is_valid_format(line: str):
     return None
 
 def read_file(file: str) -> list:
+    """
+    Lit un fichier et renvoie la liste des lignes (brutes).
+    Lève une FileNotFoundError si le fichier n'existe pas.
+    """
     try:
         with open(file, 'r') as f:
             return f.readlines()
@@ -92,9 +94,12 @@ def read_file(file: str) -> list:
         raise FileNotFoundError(f"File {file} not found")
 
 def getListPairFriend(friends_list: list):
+    """
+    Parse la liste de lignes d'amitiés et retourne la liste
+    des paires [person1, person2].
+    """
     l = []
     for line in friends_list:
-        # on nettoie la ligne avant le match
         line = line.strip()
         if not line:
             continue
@@ -106,29 +111,53 @@ def getListPairFriend(friends_list: list):
     return l
 
 def findOrCreate(graph: Graph, name: str) -> Node:
+    """
+    Si un Node portant 'name' existe déjà, on le retourne.
+    Sinon on le crée et on l'ajoute au graph.
+    """
     node = graph.find_node(name)
     if node is None:
         node = Node(name)
         graph.add_node(node)
     return node
 
-def bfs_all_distances(graph: Graph, start: Node) -> dict:
+def bfs_distance(graph: Graph, start: Node, end: Node) -> int:
     """
-    Calcule la distance minimale entre 'start' et tous les autres nœuds du graphe
-    via BFS. Renvoie un dictionnaire : { Node: distance_en_entier }.
+    Calcule la plus courte distance (en nb d'arêtes) entre start et end
+    via BFS. Retourne -1 si end n'est pas accessible.
     """
-    from collections import deque
-    queue = deque()
-    dist = {}
-
-    # on remet depth = -1 pour tout le monde avant la BFS
+    # Réinitialisation des depths
     for node in graph.nodes:
         node.depth = -1
 
-    # point de départ
+    queue = deque()
+    start.depth = 0
+    queue.append(start)
+
+    while queue:
+        current = queue.popleft()
+        if current == end:
+            return current.depth  # On a atteint la cible
+        for friend in current.friends:
+            if friend.depth == -1:
+                friend.depth = current.depth + 1
+                queue.append(friend)
+
+    return -1  # end n'est pas connecté
+
+def bfs_all_distances(graph: Graph, start: Node) -> dict:
+    """
+    Calcule la distance minimale entre 'start' et tous les autres nœuds du graphe
+    via BFS. Renvoie un dict: {Node: distance}.
+    """
+    for node in graph.nodes:
+        node.depth = -1
+
+    dist = {}
     start.depth = 0
     dist[start] = 0
-    queue.append(start)
+
+    queue = deque([start])
 
     while queue:
         current = queue.popleft()
@@ -137,12 +166,19 @@ def bfs_all_distances(graph: Graph, start: Node) -> dict:
                 friend.depth = current.depth + 1
                 dist[friend] = friend.depth
                 queue.append(friend)
+
     return dist
 
 def links(fr: str, p1: str, p2: str, graph: Graph):
+    """
+    Mode --links:
+    Construit le graphe à partir du fichier FR, puis calcule la distance
+    entre p1 et p2 grâce à BFS.
+    """
+    # Construit le graphe des amitiés
     friends_list = read_file(fr)
     listPairs = getListPairFriend(friends_list)
-    # Construction du graphe à partir du FR
+
     for pair in listPairs:
         n1 = findOrCreate(graph, pair[0])
         n2 = findOrCreate(graph, pair[1])
@@ -151,27 +187,23 @@ def links(fr: str, p1: str, p2: str, graph: Graph):
     NodeP1 = graph.find_node(p1)
     NodeP2 = graph.find_node(p2)
     if NodeP1 is None or NodeP2 is None:
+        # Si au moins un des deux n'existe pas dans le graphe
         print(f"Degree of separation between {p1} and {p2}: -1")
         return
 
-    # Remise à zéro des depth
-    for node in graph.nodes:
-        node.depth = -1
-
-    dist = graph.compute_dist(NodeP1, NodeP2)
-    if dist == math.inf:
-        dist = -1
+    dist = bfs_distance(graph, NodeP1, NodeP2)
     print(f"Degree of separation between {p1} and {p2}: {dist}")
 
 def plots(fr: str, cr: str, n: int):
     """
-    Mode plots:
-    1) Lit le fichier FR et construit le graphe des amitiés
-    2) Lit le fichier CR (non encore traité ici)
-    3) Affiche la liste des noms et la matrice de distances <= n
-    4) Gère ensuite les complots (à implémenter / compléter)
+    Mode --plots:
+      1) Lit le fichier FR (amitiés) => construit le graphe
+      2) Lit le fichier CR (complots) => à traiter/afficher
+      3) Affiche la liste alphabétique des noms
+      4) Génère et affiche la matrice des distances (si distance > n, on met 0)
+      5) Gère la logique de complot (placeholder)
     """
-    # 1) Lecture du fichier FR et construction du graphe
+    # 1) Construction du graphe d'amitiés
     friends_list = read_file(fr)
     listPairs = getListPairFriend(friends_list)
     graph = Graph()
@@ -181,18 +213,17 @@ def plots(fr: str, cr: str, n: int):
         node2 = findOrCreate(graph, pair[1])
         node1.add_friend(node2)
 
-    # 2) Lecture du fichier CR (complots) - à utiliser plus tard
+    # 2) Lecture du fichier CR
     conspiracies_list = read_file(cr)
 
-    # 3) Affiche la liste alphabétique des noms
+    # 3) Affichage des noms
     sorted_names = sorted(node.name for node in graph.nodes)
     print("Names:")
     for name in sorted_names:
         print(name)
 
-    # 4) Générer et afficher la matrice de distances
+    # 4) Générer/afficher la matrice de distances
     print("Relationships:")
-    # Pour chaque node (dans l'ordre alphabétique), on fait un BFS
     for name_src in sorted_names:
         src_node = graph.find_node(name_src)
         dist_dict = bfs_all_distances(graph, src_node)
@@ -200,27 +231,17 @@ def plots(fr: str, cr: str, n: int):
         for name_dst in sorted_names:
             dst_node = graph.find_node(name_dst)
             d = dist_dict.get(dst_node, math.inf)
-            # on stocke d si d <= n, sinon 0 (comme dans les exemples)
+            # Dans l'exemple, on n'affiche que la distance <= n, sinon 0
             row_values.append(str(d if d <= n else 0))
-        # on affiche une ligne par source
         print(" ".join(row_values))
 
-    # Ici vous pourrez gérer l’analyse des complots (informations issues de `conspiracies_list`).
-    # Exemples possibles :
-    # - Identifier la reine (Cersei Lannister) si besoin
-    # - Calculer les ennemis directs
-    # - Trouver les chaînes de complot
-    # - Affichage final: "The stone is safe!" ou "There is only one way out: treason!"
-    #
-    # Pour l'instant, on se contente de montrer la génération de la matrice.
-
-    # Ex. d'un résumé minimal des conspirations (placeholder):
+    # 5) Complots (placeholder) : ici on se contente de les afficher
     print("Conspiracies:")
     for line in conspiracies_list:
         line = line.strip()
         if not line:
             continue
-        print(line)  # juste un affichage brut pour l'instant
+        print(line)
 
     # Résultat final (placeholder)
     print("Result:")
@@ -229,21 +250,22 @@ def plots(fr: str, cr: str, n: int):
 # ========== Main ==========
 
 def main() -> int:
-    # Initialize the parser with custom usage
+    """
+    Point d'entrée principal. Gestion des arguments et choix du mode de fonctionnement.
+    """
     parser = argparse.ArgumentParser(
         usage='./game_of_stones [--links FR P1 P2 | --plots FR CR n]',
         description='Game of Stones command line tool'
     )
-    # Create a mutually exclusive group
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--links', nargs=3, metavar=('FR', 'P1', 'P2'),
                        help='FR: file containing friendship relations, P1: person one, P2: person two')
     group.add_argument('--plots', nargs=3, metavar=('FR', 'CR', 'n'),
-                       help='FR: file with friendship relations, CR: file with conspiracies intentions, n: maximum length of friendship paths')
-    graph = Graph()
+                       help='FR: file with friendship relations, CR: file with conspiracies intentions, n: max friendship path length')
 
+    graph = Graph()
     args = parser.parse_args()
-    # Process arguments based on the used option
+
     if args.links:
         fr, p1, p2 = args.links
         links(fr, p1, p2, graph)
@@ -258,8 +280,8 @@ def main() -> int:
 
 if __name__ == '__main__':
     try:
-        main()
-        sys.exit(0)
+        exit_code = main()
+        sys.exit(exit_code)
     except Exception as e:
         print(f"An error occurred: {e}", file=sys.stderr)
         sys.exit(84)
