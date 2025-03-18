@@ -56,7 +56,7 @@ class Node:
         if conspiration.name == self.name:
             raise ValueError("Cannot be conspiration with himself")
         if conspiration not in self.conspiration:
-            self.conspiration.append(conspiration)
+            conspiration.conspiration.append(self)
 
 class Graph:
     """
