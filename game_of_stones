@@ -227,15 +227,7 @@ def links(fr: str, p1: str, p2: str, graph: Graph):
     print(f"Degree of separation between {p1} and {p2}: {dist}")
 
 def plots(fr: str, cr: str, n: int):
-    """
-    Mode --plots :
-      1) Lit FR => construit le graphe des amitiés
-      2) Lit CR => construit le graphe des complots
-      3) Affiche la liste alphabétique des noms
-      4) Construit la matrice de distances (≤ n => distance, > n => 0, non joignable => -1)
-      5) Détermine les conspirations utiles pour sauver la reine (ou conclut à la trahison).
-    """
-    # 1) Construction du graphe d'amitiés
+    # Lecture du fichier FR et construction du graphe
     friends_list = read_file(fr)
     if len(friends_list) == 0:
         raise ValueError("Empty file")
@@ -247,135 +239,35 @@ def plots(fr: str, cr: str, n: int):
         n2 = find_or_create(graph, pair[1])
         n1.add_friend(n2)
 
-    # 2) Lecture et construction du graphe (orienté) de complots
     conspiracies_list = read_file(cr)
     if len(conspiracies_list) == 0:
         raise ValueError("Empty file")
 
-    # Dictionnaire : victime -> set(conspirateurs)
-    from collections import defaultdict
-    victim_to_conspirators = defaultdict(set)
-
-    # On parcourt chaque ligne "A is plotting against B"
-    pattern_plots = r'^(\S.*) is plotting against (\S.*)$'
-    for line in conspiracies_list:
-        line = line.strip()
-        if not line:
-            continue
-        match = re.match(pattern_plots, line)
-        if not match:
-            raise ValueError(f"Invalid format in CR file: {line}")
-        A_name = match.group(1).strip()
-        B_name = match.group(2).strip()
-
-        # Vérifie que A et B existent dans le graphe FR
-        A_node = graph.find_node(A_name)
-        B_node = graph.find_node(B_name)
-        if A_node is None or B_node is None:
-            # Personne inconnue dans FR => erreur
-            raise ValueError(f"Person {A_name if A_node is None else B_name} "
-                             f"from CR not found in FR")
-        # Ajout dans la structure de complot
-        A_node.add_conspiration(B_node)
-        victim_to_conspirators[B_name].add(A_name)
-
-    # 3) Affichage des noms en ordre alphabétique
     sorted_names = sorted(node.name for node in graph.nodes)
     print("Names:")
     for name in sorted_names:
         print(name)
     print()
 
-    # 4) Matrice des distances d'amitié (≤ n => distance, > n => 0, pas joignable => -1)
-    print("Relationships:")
     for name1 in sorted_names:
-        src_node = graph.find_node(name1)
-        dist_dict = bfs_all_distances(graph, src_node)  # {nodeObj: distance}
-
-        row_parts = []
+        i = 0
+        str = ""
         for name2 in sorted_names:
-            dst_node = graph.find_node(name2)
-            if dst_node in dist_dict:
-                d = dist_dict[dst_node]
-                row_parts.append(str(d if d <= n else 0))
-            else:
-                row_parts.append(str(-1))
-        print(" ".join(row_parts))
-    print()
+           dist = graph.compute_dist(graph.find_node(name1), graph.find_node(name2))
+           graph.reset_all()
+           if dist == math.inf:
+                dist = -1
+           str += f"{dist}"
+           if (i < len(sorted_names) - 1):
+               str += " "
+           i += 1
+        print(str)
+    # générer la matrice de distances
+    # gérer les conspirations
 
-    # 5) Détermination des conspirations qui neutralisent les ennemis directs de la reine
-    print("Conspiracies:")
-
-    queen_name = "Cersei Lannister"  # On suppose la reine nommée ainsi
-    queen_node = graph.find_node(queen_name)
-    if queen_node is None:
-        # Si la reine n'existe pas dans FR, on ne peut rien faire
-        print("Result:")
-        print("There is only one way out: treason!")
-        return
-
-    # (a) On calcule les distances de tous à la reine (pour la priorité #2)
-    dist_dict_queen = bfs_all_distances(graph, queen_node)  # { NodeObj: distance }
-
-    def distance_to_queen(person_name: str) -> int:
-        """Retourne la distance d'amitié jusqu'à la reine (ou un grand nombre si non joignable)."""
-        node = graph.find_node(person_name)
-        if node in dist_dict_queen:
-            return dist_dict_queen[node]
-        return 999999  # Non joignable => on met un énorme nombre
-
-    def is_enemy(person_name: str) -> bool:
-        """
-        Renvoie True si cette personne complote DIRECTEMENT contre la reine.
-        Autrement dit, si queen_name est victime de 'person_name'.
-        """
-        return person_name in victim_to_conspirators[queen_name]
-
-    # (b) Liste des ennemis directs : tous ceux qui complotent contre la reine
-    direct_enemies = sorted(victim_to_conspirators[queen_name])
-
-    # On va essayer de trouver un conspirateur pour chaque ennemi direct
-    conspiracies_used = []
-    cannot_neutralize = False
-
-    for enemy_name in direct_enemies:
-        # Ensemble de gens qui complotent contre cet ennemi
-        conspirators = victim_to_conspirators[enemy_name]
-        if not conspirators:
-            # Personne ne le vise => impossible à neutraliser
-            print(f"No conspiracy possible against {enemy_name}")
-            cannot_neutralize = True
-            continue
-
-        # Tri des conspirateurs selon la priorité demandée :
-        # (pas ennemi => 0, si ennemi => 1), distance à la reine, ordre alphabétique
-        sorted_candidates = sorted(
-            conspirators,
-            key=lambda c: (
-                1 if is_enemy(c) else 0,            # d'abord ceux qui NE sont pas ennemis
-                distance_to_queen(c),
-                c
-            )
-        )
-
-        best = sorted_candidates[0]
-        conspiracies_used.append((best, enemy_name))
-
-    # (c) Affichage des conspirations utiles, triées selon l'ordre alphabétique du conspirateur
-    #     (pour reproduire l'exemple officiel).
-    conspiracies_used.sort(key=lambda x: x[0])  # x[0] est le conspirateur
-    for (c_name, e_name) in conspiracies_used:
-        # Si on n'a pas trouvé de conspirateur viable pour e_name, on n'ajoute pas
-        # Dans la boucle ci-dessus, on n'ajoute que si conspirators n'est pas vide.
-        print(f"{c_name} -> {e_name}")
-
-    print()
-    print("Result:")
-    if cannot_neutralize:
-        print("There is only one way out: treason!")
-    else:
-        print("The stone is safe!")
-
+    # print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
+    # affichage de la matrice
+    # affichage manipulations de complot
 
 # ========== Main ==========
 
