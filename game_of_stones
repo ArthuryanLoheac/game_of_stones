@@ -227,7 +227,15 @@ def links(fr: str, p1: str, p2: str, graph: Graph):
     print(f"Degree of separation between {p1} and {p2}: {dist}")
 
 def plots(fr: str, cr: str, n: int):
-    # Lecture du fichier FR et construction du graphe
+    """
+    Mode --plots :
+      1) Lit FR => construit le graphe des amitiés
+      2) Lit CR => à traiter
+      3) Affiche la liste alphabétique des noms
+      4) Construit la matrice de distances (<= n) ou -1 / 0 selon besoins
+      5) Placeholder pour la logique de complot
+    """
+    # 1) Construction du graphe
     friends_list = read_file(fr)
     if len(friends_list) == 0:
         raise ValueError("Empty file")
@@ -239,35 +247,54 @@ def plots(fr: str, cr: str, n: int):
         n2 = find_or_create(graph, pair[1])
         n1.add_friend(n2)
 
+    # 2) Lecture CR
     conspiracies_list = read_file(cr)
     if len(conspiracies_list) == 0:
         raise ValueError("Empty file")
 
+    # 3) Affiche la liste alphabétique des noms
     sorted_names = sorted(node.name for node in graph.nodes)
     print("Names:")
     for name in sorted_names:
         print(name)
     print()
 
+    # 4) Matrice des distances (≤ n => on affiche la distance, > n => 0, ou -1)
+    #   L'exemple du sujet montre :
+    #     - distance <= n => on affiche la valeur
+    #     - distance > n => on affiche "0"
+    #
+    #   Pour chaque "row" = name1, on exécute BFS depuis name1, et on récupère
+    #   la distance vers chaque name2 dans le dict.
+    print("Relationships:")
     for name1 in sorted_names:
-        i = 0
-        str = ""
-        for name2 in sorted_names:
-           dist = graph.compute_dist(graph.find_node(name1), graph.find_node(name2))
-           graph.reset_all()
-           if dist == math.inf:
-                dist = -1
-           str += f"{dist}"
-           if (i < len(sorted_names) - 1):
-               str += " "
-           i += 1
-        print(str)
-    # générer la matrice de distances
-    # gérer les conspirations
+        src_node = graph.find_node(name1)
+        dist_dict = bfs_all_distances(graph, src_node)
 
-    # print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
-    # affichage de la matrice
-    # affichage manipulations de complot
+        row_parts = []
+        for name2 in sorted_names:
+            dst_node = graph.find_node(name2)
+            if dst_node in dist_dict:
+                d = dist_dict[dst_node]
+                row_parts.append(str(d if d <= n else 0))
+            else:
+                # si dst_node n'est pas joignable
+                row_parts.append(str(-1))  # ou 0, selon ce que vous voulez
+        print(" ".join(row_parts))
+    print()
+
+    # 5) Placeholder : affichage brut des complots
+    print("Conspiracies:")
+    for line in conspiracies_list:
+        line = line.strip()
+        if not line:
+            continue
+        print(line)
+    print()
+
+    # Placeholder final
+    print("Result:")
+    print("The stone is safe!")  # ou "There is only one way out: treason!
 
 # ========== Main ==========
 
