@@ -230,7 +230,6 @@ def plots(fr: str, cr: str, n: int):
 
     listConspiracies = get_list_pair_conspiracy(conspiracies_list)
 
-    # === NEW/UPDATED ===
     # On stocke la structure plotsAgainst: { "A": set(["B", ...]) } si A complote contre B
     plotsAgainst = {}
     for pair in listConspiracies:
