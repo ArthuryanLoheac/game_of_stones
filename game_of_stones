@@ -9,6 +9,9 @@ import re
 # ========== Classes ==========
 
 class ArgumentParser(argparse.ArgumentParser):    
+    """
+    Custom ArgumentParser pour gérer plus finement certaines erreurs.
+    """
     def _get_action_from_name(self, name):
         container = self._actions
         if name is None:
@@ -20,6 +23,7 @@ class ArgumentParser(argparse.ArgumentParser):
                 return action
             elif action.dest == name:
                 return action
+        return None
 
     def error(self, message):
         exc = sys.exc_info()[1]
@@ -29,17 +33,17 @@ class ArgumentParser(argparse.ArgumentParser):
         super(ArgumentParser, self).error(message)
 
 class Node:
-    name = ""
-    friends = []
-    conspiration = []
-    depth = -1
-
+    """
+    Représente un personnage, ses amis et ceux qu'il complote contre.
+    """
     def __init__(self, name: str):
         self.name = name
-        self.friends = []
-        self.conspiration = []
+        self.friends = []        # liste de Node (amitiés)
+        self.conspiration = []   # liste de Node (complots orientés)
+        self.depth = -1          # utilisé pour BFS si nécessaire
 
     def add_friend(self, friend: 'Node'):
+        """Ajoute une relation d'amitié bi-directionnelle."""
         if friend.name == self.name:
             raise ValueError("Cannot be friend with himself")
         if friend not in self.friends:
@@ -48,17 +52,19 @@ class Node:
             friend.friends.append(self)
 
     def add_conspiration(self, conspiration: 'Node'):
+        """Ajoute un complot (orienté)."""
         if conspiration.name == self.name:
             raise ValueError("Cannot be conspiration with himself")
         if conspiration not in self.conspiration:
             self.conspiration.append(conspiration)
 
 class Graph:
-    nodes = []
-    QueenNode = None
-
+    """
+    Le graphe global : liste de Node et, éventuellement, référence à la reine.
+    """
     def __init__(self):
         self.nodes = []
+        self.QueenNode = None
 
     def add_node(self, node: Node):
         if node not in self.nodes:
@@ -67,37 +73,29 @@ class Graph:
             raise ValueError("Node already exists")
 
     def add_queen(self, node: Node):
+        """Spécifie qui est la reine (optionnel)."""
         if self.QueenNode is not None:
             raise ValueError("Queen already exists")
         self.QueenNode = node
         self.add_node(node)
 
     def find_node(self, name: str) -> Node:
+        """
+        Retourne le Node portant le nom 'name', ou None si introuvable.
+        """
         for node in self.nodes:
             if node.name == name:
                 return node
         return None
 
-    def reset_all(self):
-        for node in self.nodes:
-            node.depth = -1
-
-    def compute_dist(self, start : Node, end : Node, depth = 0) -> int:
-        if start == end and depth == 0:
-            return depth
-        if start == end:
-            return depth - 1
-        min_dist = math.inf
-        for friend in start.friends:
-            if friend.depth == -1:
-                friend.depth = depth
-                dist = self.compute_dist(friend, end, depth + 1)
-                min_dist = min(min_dist, dist)
-        return min_dist
-
-# ========== Functions ==========
+# ========== Functions Utilitaires ==========
 
 def is_valid_format(line: str):
+    """
+    Vérifie si la ligne correspond au format:
+      "<personne> is friends with <personne>"
+    Retourne [personne1, personne2] ou None.
+    """
     pattern = r'^(\S.*) is friends with (\S.*)$'
     match = re.match(pattern, line)
     if match:
@@ -105,6 +103,10 @@ def is_valid_format(line: str):
     return None
 
 def read_file(file: str) -> list:
+    """
+    Lit un fichier et renvoie la liste brute des lignes.
+    Lève FileNotFoundError si le fichier n'existe pas.
+    """
     try:
         with open(file, 'r') as f:
             return f.readlines()
@@ -112,28 +114,101 @@ def read_file(file: str) -> list:
         raise FileNotFoundError(f"File {file} not found")
 
 def get_list_pair_friend(friends_list: list):
+    """
+    Parse chaque ligne du fichier d'amitiés et retourne les paires [p1, p2].
+    """
     l = []
     for line in friends_list:
+        line = line.strip()
+        if not line:
+            continue
         a = is_valid_format(line)
         if a is not None:
             l.append(a)
         else:
-            raise ValueError("Invalid format in file")
+            raise ValueError(f"Invalid format in file: {line}")
     return l
 
 def find_or_create(graph: Graph, name: str) -> Node:
+    """
+    Cherche le nœud 'name' dans graph, le crée s'il n'existe pas encore.
+    Renvoie le Node correspondant.
+    """
     node = graph.find_node(name)
     if node is None:
         node = Node(name)
         graph.add_node(node)
     return node
 
+# ========== BFS Functions ==========
+
+def bfs_distance(graph: Graph, start: Node, end: Node) -> int:
+    """
+    Calcule la plus courte distance (en nb d'arêtes) entre start et end via BFS.
+    Retourne -1 si end n'est pas accessible.
+    """
+    # Remise à zéro des depths
+    for node in graph.nodes:
+        node.depth = -1
+
+    from collections import deque
+    queue = deque()
+    start.depth = 0
+    queue.append(start)
+
+    while queue:
+        current = queue.popleft()
+        if current == end:
+            return current.depth  # On a trouvé la cible, c'est la distance min
+        for friend in current.friends:
+            if friend.depth == -1:
+                friend.depth = current.depth + 1
+                queue.append(friend)
+
+    return -1  # end n'a pas été trouvé
+
+def bfs_all_distances(graph: Graph, start: Node) -> dict:
+    """
+    Calcule la distance minimale entre 'start' et tous les autres nœuds
+    via BFS. Renvoie un dict { node: distance }.
+    Si un nœud n'est pas joignable, il ne figurera pas dans le dict.
+    """
+    # Remise à zéro des depths
+    for node in graph.nodes:
+        node.depth = -1
+
+    dist = {}
+    from collections import deque
+    queue = deque()
+    start.depth = 0
+    queue.append(start)
+    dist[start] = 0
+
+    while queue:
+        current = queue.popleft()
+        for friend in current.friends:
+            if friend.depth == -1:
+                friend.depth = current.depth + 1
+                dist[friend] = friend.depth
+                queue.append(friend)
+
+    return dist
+
+# ========== Modes ==========
+
 def links(fr: str, p1: str, p2: str, graph: Graph):
+    """
+    Mode --links :
+      1) Lit le fichier FR et construit le graphe des amitiés
+      2) Calcule BFS pour obtenir la distance entre p1 et p2
+      3) Affiche le résultat
+    """
     friends_list = read_file(fr)
     if len(friends_list) == 0:
         raise ValueError("Empty file")
+
     listPairs = get_list_pair_friend(friends_list)
-    # Construction du graphe à partir du FR
+    # Construction du graphe
     for pair in listPairs:
         n1 = find_or_create(graph, pair[0])
         n2 = find_or_create(graph, pair[1])
@@ -141,83 +216,114 @@ def links(fr: str, p1: str, p2: str, graph: Graph):
 
     NodeP1 = graph.find_node(p1)
     NodeP2 = graph.find_node(p2)
+
+    # Si p1 ou p2 n'existe pas dans le graphe
     if NodeP1 is None or NodeP2 is None:
         print(f"Degree of separation between {p1} and {p2}: -1")
         return
 
-    dist = graph.compute_dist(NodeP1, NodeP2)
-    if dist == math.inf:
-        dist = -1
+    # BFS distance
+    dist = bfs_distance(graph, NodeP1, NodeP2)
     print(f"Degree of separation between {p1} and {p2}: {dist}")
 
 def plots(fr: str, cr: str, n: int):
-    # Lecture du fichier FR et construction du graphe
+    """
+    Mode --plots :
+      1) Lit FR => construit le graphe des amitiés
+      2) Lit CR => à traiter
+      3) Affiche la liste alphabétique des noms
+      4) Construit la matrice de distances (<= n) ou -1 / 0 selon besoins
+      5) Placeholder pour la logique de complot
+    """
+    # 1) Construction du graphe
     friends_list = read_file(fr)
     if len(friends_list) == 0:
         raise ValueError("Empty file")
+
     listPairs = get_list_pair_friend(friends_list)
     graph = Graph()
-
     for pair in listPairs:
         n1 = find_or_create(graph, pair[0])
         n2 = find_or_create(graph, pair[1])
         n1.add_friend(n2)
 
+    # 2) Lecture CR
     conspiracies_list = read_file(cr)
     if len(conspiracies_list) == 0:
         raise ValueError("Empty file")
 
+    # 3) Affiche la liste alphabétique des noms
     sorted_names = sorted(node.name for node in graph.nodes)
     print("Names:")
     for name in sorted_names:
         print(name)
     print()
 
+    # 4) Matrice des distances (≤ n => on affiche la distance, > n => 0, ou -1)
+    #   L'exemple du sujet montre :
+    #     - distance <= n => on affiche la valeur
+    #     - distance > n => on affiche "0"
+    #
+    #   Pour chaque "row" = name1, on exécute BFS depuis name1, et on récupère
+    #   la distance vers chaque name2 dans le dict.
+    print("Relationships:")
     for name1 in sorted_names:
-        i = 0
-        str = ""
-        for name2 in sorted_names:
-           dist = graph.compute_dist(graph.find_node(name1), graph.find_node(name2))
-           graph.reset_all()
-           if dist == math.inf:
-                dist = -1
-           str += f"{dist}"
-           if (i < len(sorted_names) - 1):
-               str += " "
-           i += 1
-        print(str)
-    # générer la matrice de distances
-    # gérer les conspirations
+        src_node = graph.find_node(name1)
+        dist_dict = bfs_all_distances(graph, src_node)
 
-    # print(f"Plots mode: FR={fr}, CR={cr}, n={n}")
-    # affichage de la matrice
-    # affichage manipulations de complot
+        row_parts = []
+        for name2 in sorted_names:
+            dst_node = graph.find_node(name2)
+            if dst_node in dist_dict:
+                d = dist_dict[dst_node]
+                row_parts.append(str(d if d <= n else 0))
+            else:
+                # si dst_node n'est pas joignable
+                row_parts.append(str(-1))  # ou 0, selon ce que vous voulez
+        print(" ".join(row_parts))
+    print()
+
+    # 5) Placeholder : affichage brut des complots
+    print("Conspiracies:")
+    for line in conspiracies_list:
+        line = line.strip()
+        if not line:
+            continue
+        print(line)
+    print()
+
+    # Placeholder final
+    print("Result:")
+    print("The stone is safe!")  # ou "There is only one way out: treason!
 
 # ========== Main ==========
 
 def main() -> int:
-    if (len(sys.argv) != 5):
+    """
+    Point d'entrée. On utilise la classe custom ArgumentParser pour parser.
+    """
+    if len(sys.argv) != 5:
         raise ValueError("Invalid number of arguments")
-    # Initialize the parser with custom usage
+
     parser = ArgumentParser(
         usage='./game_of_stones [--links FR P1 P2 | --plots FR CR n]',
         description='Game of Stones command line tool'
     )
-    # Create a mutually exclusive group
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--links', nargs=3, metavar=('FR', 'P1', 'P2'),
                        help='FR: file containing friendship relations, P1: person one, P2: person two')
     group.add_argument('--plots', nargs=3, metavar=('FR', 'CR', 'n'),
-                       help='FR: file with friendship relations, CR: file with conspiracies intentions, n: maximum length of friendship paths')
+                       help='FR: file with friendship relations, CR: file with conspiracies intentions, n: max friendship path length')
     graph = Graph()
     
     args = parser.parse_args()
-    # Process arguments based on the used option
+
+    # Selon le mode
     if args.links:
         fr, p1, p2 = args.links
         links(fr, p1, p2, graph)
 
-    if args.plots:
+    elif args.plots:
         fr, cr, n = args.plots
         if not n.isdigit() or int(n) <= 0:
             raise ValueError("n must be a positive number")
