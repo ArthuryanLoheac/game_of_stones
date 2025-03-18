@@ -102,6 +102,18 @@ def is_valid_format(line: str):
         return [match.group(1).strip(), match.group(2).strip()]
     return None
 
+def is_valid_format_plots(line: str):
+    """
+    Vérifie si la ligne correspond au format:
+      "<personne> is plotting against <personne>"
+    Retourne [personne1, personne2] ou None.
+    """
+    pattern = r'^(\S.*) is plotting against (\S.*)$'
+    match = re.match(pattern, line)
+    if match:
+        return [match.group(1).strip(), match.group(2).strip()]
+    return None
+
 def read_file(file: str) -> list:
     """
     Lit un fichier et renvoie la liste brute des lignes.
@@ -129,6 +141,22 @@ def get_list_pair_friend(friends_list: list):
             raise ValueError(f"Invalid format in file: {line}")
     return l
 
+def get_list_pair_plots(plots_list: list):
+    """
+    Parse chaque ligne du fichier de plots et retourne les paires [p1, p2].
+    """
+    l = []
+    for line in plots_list:
+        line = line.strip()
+        if not line:
+            continue
+        a = is_valid_format_plots(line)
+        if a is not None:
+            l.append(a)
+        else:
+            raise ValueError(f"Invalid format in file: {line}")
+    return l
+
 def find_or_create(graph: Graph, name: str) -> Node:
     """
     Cherche le nœud 'name' dans graph, le crée s'il n'existe pas encore.
@@ -138,6 +166,16 @@ def find_or_create(graph: Graph, name: str) -> Node:
     if node is None:
         node = Node(name)
         graph.add_node(node)
+    return node
+
+def find_or_error(graph: Graph, name: str) -> Node:
+    """
+    Cherche le nœud 'name' dans graph, le crée s'il n'existe pas encore.
+    Renvoie le Node correspondant.
+    """
+    node = graph.find_node(name)
+    if node is None:
+        raise ValueError(f"Node {name} not found")
     return node
 
 # ========== BFS Functions ==========
@@ -251,6 +289,12 @@ def plots(fr: str, cr: str, n: int):
     conspiracies_list = read_file(cr)
     if len(conspiracies_list) == 0:
         raise ValueError("Empty file")
+    
+    listConsp = get_list_pair_plots(friends_list)
+    for pair in listConsp:
+        n1 = find_or_error(graph, pair[0])
+        n2 = find_or_error(graph, pair[1])
+        n1.add_conspiration(n2)
 
     # 3) Affiche la liste alphabétique des noms
     sorted_names = sorted(node.name for node in graph.nodes)
