@@ -334,45 +334,31 @@ def plots(fr: str, cr: str, n: int):
     # Tri alphabétique des ennemis directs
     direct_enemies = sorted(set(direct_enemies), key=lambda node: node.name)
 
-    # Pour chaque ennemi direct, chercher une chaîne candidate
+    # Pour chaque ennemi direct, chercher la chaîne candidate (la meilleure trouvée)
     candidate_chains = {}   # mapping enemy.name -> candidate chain (liste de noms)
     for enemy in direct_enemies:
         chain = find_conspiracy_chain_for_enemy(graph, enemy, n, dist_from_queen, queenNode)
         if chain is not None:
             candidate_chains[enemy.name] = chain
 
-    # Sélection disjointe des chaînes :
-    # On ne peut pas utiliser le même personnage (hors cible) dans deux chaînes différentes.
+    # Sélection disjointe des chaînes en traitant les ennemis dans l'ordre alphabétique
     selected = {}  # enemy name -> chain
     used_nodes = set()  # ensemble des personnages déjà affectés (hors cible)
-    # On crée une liste de candidats avec leur priorité (même critère que dans find_conspiracy_chain_for_enemy)
-    def chain_priority(chain):
-        S = graph.find_node(chain[0])
-        is_direct = 1 if queenNode in S.conspiration else 0
-        return (len(chain), is_direct, dist_from_queen.get(S, 9999), S.name, chain)
-    # Liste de tuples (enemy, chain, priority)
-    candidates = []
-    for enemy_name, chain in candidate_chains.items():
-        candidates.append((enemy_name, chain, chain_priority(chain)))
-    # On trie par priorité croissante
-    candidates.sort(key=lambda tup: tup[2])
-    assigned_enemies = set()
-    for enemy_name, chain, prio in candidates:
-        # Vérifier que les personnages de la chaîne (sauf la cible enemy) ne sont pas déjà utilisés
-        chain_nodes = set(chain[:-1])
-        if used_nodes & chain_nodes:
-            continue  # conflit, on ne peut pas affecter ce candidat
-        # Sinon, on affecte la chaîne pour cet ennemi
-        selected[enemy_name] = chain
-        used_nodes |= chain_nodes
-        assigned_enemies.add(enemy_name)
-    # Pour les ennemis directs sans chaîne assignée, on les ajoute dans no_chain
     no_chain = set()
     for enemy in direct_enemies:
-        if enemy.name not in assigned_enemies:
+        if enemy.name in candidate_chains:
+            chain = candidate_chains[enemy.name]
+            # On considère les nœuds de la chaîne sauf le dernier (la cible)
+            chain_nodes = set(chain[:-1])
+            if used_nodes & chain_nodes:
+                no_chain.add(enemy.name)
+            else:
+                selected[enemy.name] = chain
+                used_nodes |= chain_nodes
+        else:
             no_chain.add(enemy.name)
 
-    # Constitution de la liste finale des chaînes assignées (triées par longueur, puis ordre lexicographique)
+    # Constitution de la liste finale des chaînes assignées pour l'affichage :
     final_chains = list(selected.values())
     final_chains.sort(key=lambda chain: (len(chain), chain))
     
@@ -383,7 +369,7 @@ def plots(fr: str, cr: str, n: int):
         print(f"No conspiracy possible against {enemy}")
     print()
 
-    if len(assigned_enemies) != len(direct_enemies):
+    if len(selected) != len(direct_enemies):
         print("Result:")
         print("There is only one way out: treason!")
     else:
