@@ -1,0 +1,6 @@
+Cersei Lannister is friends with Chandra Nalaar
+Cersei Lannister is friends with Nicol Bolas
+Cersei Lannister is friends with Nissa Revane
+Chandra Nalaar is friends with Jace Beleren
+Nissa Revane is friends with Garruk Wildspeaker
+Jace Beleren is friends with Ugin

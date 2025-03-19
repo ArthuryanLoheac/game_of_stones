@@ -1,4 +1,4 @@
-./game_of_stones --plots tests/inputs/friends/subject_friends.txt tests/inputs/plots/subject_plots.txt 3
+./game_of_stones --plots tests/inputs/friends/subject.txt tests/inputs/plots/subject.txt 3
 ############################################################################################################
 Names:
 Cersei Lannister

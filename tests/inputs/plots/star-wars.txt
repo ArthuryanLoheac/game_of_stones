@@ -1,0 +1,10 @@
+Darth Vader is plotting against Cersei Lannister
+Leia Organa is plotting against Cersei Lannister
+Mace Windu is plotting against Cersei Lannister
+Jabba the Hutt is plotting against Cersei Lannister
+Luke Skywalker is plotting against Darth Vader
+Obi-Wan Kenobi is plotting against Leia Organa
+Chewbacca is plotting against Mace Windu
+Boba Fett is plotting against Jabba the Hutt
+Obi-Wan Kenobi is plotting against Darth Vader
+Han Solo is plotting against Chewbacca

@@ -1,0 +1,21 @@
+./game_of_stones --plots ./tests/inputs/friends/abcd_diff_n2_n3.txt ./tests/inputs/plots/abcd_diff_n2_n3.txt 2
+############################################################################################################
+Names:
+Cersei Lannister
+Person A
+Person B
+Person C
+Person D
+
+Relationships:
+0 2 1 2 0
+2 0 1 2 0
+1 1 0 1 2
+2 2 1 0 1
+0 0 2 1 0
+
+Conspiracies:
+No conspiracy possible against Person A
+
+Result:
+There is only one way out: treason!

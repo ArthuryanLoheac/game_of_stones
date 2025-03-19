@@ -1,0 +1,28 @@
+./game_of_stones --plots ./tests/inputs/friends/magic.txt ./tests/inputs/plots/magic.txt 2
+############################################################################################################
+Names:
+Cersei Lannister
+Chandra Nalaar
+Garruk Wildspeaker
+Jace Beleren
+Nicol Bolas
+Nissa Revane
+Ugin
+
+Relationships:
+0 1 2 2 1 1 0
+1 0 0 1 2 2 2
+2 0 0 0 0 1 0
+2 1 0 0 0 0 1
+1 2 0 0 0 2 0
+1 2 1 0 2 0 0
+0 2 0 1 0 0 0
+
+Conspiracies:
+Garruk Wildspeaker -> Chandra Nalaar
+Jace Beleren -> Ugin
+Nissa Revane -> Nicol Bolas
+No conspiracy possible against Jace Beleren
+
+Result:
+There is only one way out: treason!

@@ -1,0 +1,21 @@
+./game_of_stones --plots ./tests/inputs/friends/complex.txt ./tests/inputs/plots/complex.txt 2
+############################################################################################################
+Names:
+Cersei Lannister
+Daenerys
+Jaime
+Missandei
+Tyrion
+
+Relationships:
+0 2 1 2 1
+2 0 1 1 1
+1 1 0 1 1
+2 1 1 0 2
+1 1 1 2 0
+
+Conspiracies:
+Tyrion -> Daenerys
+
+Result:
+The stone is safe!
