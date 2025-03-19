@@ -11,3 +11,4 @@ unit_tests
 *.d
 obj/
 build
+__pycache__/
