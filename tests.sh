@@ -15,18 +15,18 @@ function run_test() {
     local file="$1"
     local test_name=$(basename "$file")
     ((TOTAL++))
-    
+
     echo -e "${YELLOW}Running test: ${test_name}${NC}"
-    
+
     # Get the command from the first line of the file
     local cmd=$(head -n 1 "$file")
-    
+
     # Get the expected output (lines 3 and beyond)
     local expected_output=$(tail -n +3 "$file")
-    
+
     # Run the command and capture output
     local actual_output=$(eval "$cmd" 2>&1)
-    
+
     # Compare outputs
     if [ "$actual_output" == "$expected_output" ]; then
         echo -e "${GREEN}✓ Test passed${NC}"

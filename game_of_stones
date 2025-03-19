@@ -5,7 +5,7 @@ from argparser import CustomArgumentParser
 from graph import Graph, find_or_create
 from bfs import bfs_distance, bfs_all_distances
 from utils import read_file, get_list_pair_friend, get_list_pair_conspiracy
-from conspiracies import execute_links, execute_plots
+from conspiracies.execution import execute_links, execute_plots
 
 def main():
     if len(sys.argv) != 5:
