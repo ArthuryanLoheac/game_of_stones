@@ -210,7 +210,7 @@ def find_conspiracy_chain_for_enemy(graph: Graph, enemy: Node, n: int, dist_from
             continue
         if node not in dist_from_queen or dist_from_queen[node] > n:
             continue
-        # Lancer une recherche en largeur (BFS) dans le graphe des complots depuis ce node
+        # Recherche en largeur (BFS) dans le graphe des complots depuis ce node
         queue = deque()
         queue.append((node, [node]))
         while queue:
@@ -226,12 +226,9 @@ def find_conspiracy_chain_for_enemy(graph: Graph, enemy: Node, n: int, dist_from
     if not candidate_chains:
         return None
 
-    # Pour chaque chaîne candidate, déterminer la priorité de son point de départ (S = chain[0])
-    # La priorité est définie par le tuple:
-    #   (len(chain), is_direct, dist_from_queen[S], S.name)
-    # où is_direct vaut 0 si S **ne** complote PAS contre la Reine, 1 sinon.
     def chain_priority(chain):
         S = chain[0]
+        # is_direct vaut 1 si S complote directement contre la Reine, 0 sinon
         is_direct = 1 if queenNode in S.conspiration else 0
         return (len(chain), is_direct, dist_from_queen.get(S, 9999), S.name, [node.name for node in chain])
     candidate_chains.sort(key=chain_priority)
@@ -337,30 +334,56 @@ def plots(fr: str, cr: str, n: int):
     # Tri alphabétique des ennemis directs
     direct_enemies = sorted(set(direct_enemies), key=lambda node: node.name)
 
-    chains = {}   # mapping enemy.name -> chaîne (liste de noms)
-    no_chain = set()
-
-    # Pour chaque ennemi direct, chercher une chaîne de complot en appliquant la règle de sélection
+    # Pour chaque ennemi direct, chercher une chaîne candidate
+    candidate_chains = {}   # mapping enemy.name -> candidate chain (liste de noms)
     for enemy in direct_enemies:
         chain = find_conspiracy_chain_for_enemy(graph, enemy, n, dist_from_queen, queenNode)
         if chain is not None:
-            chains[enemy.name] = chain
-        else:
+            candidate_chains[enemy.name] = chain
+
+    # Sélection disjointe des chaînes :
+    # On ne peut pas utiliser le même personnage (hors cible) dans deux chaînes différentes.
+    selected = {}  # enemy name -> chain
+    used_nodes = set()  # ensemble des personnages déjà affectés (hors cible)
+    # On crée une liste de candidats avec leur priorité (même critère que dans find_conspiracy_chain_for_enemy)
+    def chain_priority(chain):
+        S = graph.find_node(chain[0])
+        is_direct = 1 if queenNode in S.conspiration else 0
+        return (len(chain), is_direct, dist_from_queen.get(S, 9999), S.name, chain)
+    # Liste de tuples (enemy, chain, priority)
+    candidates = []
+    for enemy_name, chain in candidate_chains.items():
+        candidates.append((enemy_name, chain, chain_priority(chain)))
+    # On trie par priorité croissante
+    candidates.sort(key=lambda tup: tup[2])
+    assigned_enemies = set()
+    for enemy_name, chain, prio in candidates:
+        # Vérifier que les personnages de la chaîne (sauf la cible enemy) ne sont pas déjà utilisés
+        chain_nodes = set(chain[:-1])
+        if used_nodes & chain_nodes:
+            continue  # conflit, on ne peut pas affecter ce candidat
+        # Sinon, on affecte la chaîne pour cet ennemi
+        selected[enemy_name] = chain
+        used_nodes |= chain_nodes
+        assigned_enemies.add(enemy_name)
+    # Pour les ennemis directs sans chaîne assignée, on les ajoute dans no_chain
+    no_chain = set()
+    for enemy in direct_enemies:
+        if enemy.name not in assigned_enemies:
             no_chain.add(enemy.name)
 
-    # Constitution de la liste finale des chaînes (triées par longueur, puis ordre lexicographique)
-    final_chains = list(chains.values())
+    # Constitution de la liste finale des chaînes assignées (triées par longueur, puis ordre lexicographique)
+    final_chains = list(selected.values())
     final_chains.sort(key=lambda chain: (len(chain), chain))
-
+    
     print("Conspiracies:")
     for chain in final_chains:
         print(" -> ".join(chain))
-    # Affichage des ennemis sans chaîne
     for enemy in sorted(no_chain):
         print(f"No conspiracy possible against {enemy}")
     print()
 
-    if no_chain:
+    if len(assigned_enemies) != len(direct_enemies):
         print("Result:")
         print("There is only one way out: treason!")
     else:
