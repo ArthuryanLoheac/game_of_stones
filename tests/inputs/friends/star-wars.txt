@@ -1,0 +1,13 @@
+Cersei Lannister is friends with Darth Vader
+Cersei Lannister is friends with Leia Organa
+Cersei Lannister is friends with Obi-Wan Kenobi
+Cersei Lannister is friends with Mace Windu
+Cersei Lannister is friends with Jabba the Hutt
+Darth Vader is friends with Luke Skywalker
+Leia Organa is friends with Han Solo
+Obi-Wan Kenobi is friends with Chewbacca
+Jabba the Hutt is friends with Boba Fett
+Han Solo is friends with Luke Skywalker
+Han Solo is friends with Chewbacca
+Rey is friends with Finn
+Rey is friends with Han Solo

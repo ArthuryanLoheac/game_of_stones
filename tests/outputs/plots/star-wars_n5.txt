@@ -1,0 +1,38 @@
+./game_of_stones --plots ./tests/inputs/friends/star-wars.txt ./tests/inputs/plots/star-wars.txt 5
+############################################################################################################
+Names:
+Boba Fett
+Cersei Lannister
+Chewbacca
+Darth Vader
+Finn
+Han Solo
+Jabba the Hutt
+Leia Organa
+Luke Skywalker
+Mace Windu
+Obi-Wan Kenobi
+Rey
+
+Relationships:
+0 2 3 3 0 2 1 1 2 1 1 3
+2 0 2 1 4 2 1 1 2 1 1 3
+3 2 0 0 0 1 2 2 2 0 1 2
+3 1 0 0 0 2 2 2 1 2 2 3
+0 4 0 0 0 0 0 0 0 0 0 1
+2 2 1 2 0 0 0 1 1 0 2 1
+1 1 2 2 0 0 0 2 0 2 2 3
+1 1 2 2 0 1 2 0 2 2 2 2
+2 2 2 1 0 1 0 2 0 0 0 2
+1 1 0 2 0 0 2 2 0 0 2 0
+1 1 1 2 0 2 2 2 0 2 0 0
+3 3 2 3 1 1 3 2 2 0 0 0
+
+Conspiracies:
+Luke Skywalker -> Darth Vader
+Obi-Wan Kenobi -> Leia Organa
+Chewbacca -> Mace Windu
+Boba Fett -> Jabba the Hutt
+
+Result:
+The stone is safe!

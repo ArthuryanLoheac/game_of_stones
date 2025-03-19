@@ -1,0 +1,3 @@
+./game_of_stones --links ./tests/inputs/friends/magic.txt "Chandra Nalaar" "Chandra Nalaar"
+############################################################################################################
+Degree of separation between Chandra Nalaar and Chandra Nalaar: 0
