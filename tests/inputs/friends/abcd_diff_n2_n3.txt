@@ -1,0 +1,4 @@
+Cersei Lannister is friends with Person B
+Person B is friends with Person C
+Person C is friends with Person D
+Person B is friends with Person A

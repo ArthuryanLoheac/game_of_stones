@@ -1,0 +1,43 @@
+./game_of_stones --plots tests/inputs/friends/subject.txt tests/inputs/plots/subject.txt 1
+############################################################################################################
+Names:
+Cersei Lannister
+Daenerys Targaryen
+Jeor Mormont
+Jon Snow
+Jorah Mormont
+Lynce Hightower
+Maester Aemon
+Missandei
+Samwell Tarly
+Sansa Stark
+The Mountain
+Theon Greyjoy
+Tyrion Lannister
+Tywin Lannister
+Vere
+
+Relationships:
+0 0 0 0 1 0 0 0 0 1 1 0 1 1 0
+0 0 0 0 1 0 0 1 0 0 0 0 0 0 0
+0 0 0 0 1 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 1 1 0 1 0 0 0
+1 1 1 0 0 1 0 0 0 0 0 0 0 0 0
+0 0 0 0 1 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 1 0 0 0 0 1 0
+0 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 1 0 0 1 0 0 1 0 0 0 0 1
+1 0 0 1 0 0 0 0 1 0 0 0 0 0 0
+1 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 1 0 0 0 0 0 0 0 0 0 0 0
+1 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 1 0 0 0 0 0 0
+
+Conspiracies:
+Tywin Lannister -> Daenerys Targaryen
+The Mountain -> Jon Snow -> Theon Greyjoy -> Sansa Stark
+No conspiracy possible against Tywin Lannister
+
+Result:
+There is only one way out: treason!
