@@ -34,7 +34,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
 class Node:
     """
-    Représente un personnage, ses amis et ceux contre qui il complote.
+    Représente un personnage, ses amis et ceux contre lesquels il complote.
     """
     def __init__(self, name: str):
         self.name = name
@@ -188,31 +188,34 @@ def bfs_all_distances(graph: Graph, start: Node) -> dict:
 
 # ========== Recherche de chaîne de complot ==========
 
-def find_conspiracy_chain_for_enemy(graph: Graph, queenNode: Node, enemy: Node, n: int, dist_from_queen: dict) -> list:
+def find_conspiracy_chain_for_enemy(graph: Graph, enemy: Node, n: int, dist_from_queen: dict, used_set: set) -> list:
     """
     Cherche une chaîne de complot depuis un ami proche de la reine (distance <= n)
-    jusqu'à l'ennemi direct.
-    Une chaîne est une séquence de personnages [S, ..., enemy] où :
-      - S est un ami proche de la reine (distance <= n) et S != enemy
-      - Pour chaque lien, X complote contre Y (Y ∈ X.conspiration)
-      - Aucun personnage ne figure deux fois dans la chaîne.
-    Retourne la chaîne sous forme de liste de noms (la chaîne la plus courte,
-    et en cas d'égalité, la première en ordre alphabétique) ou None si aucune chaîne n'existe.
+    jusqu'à l'ennemi direct, sans réutiliser un personnage déjà utilisé (dans used_set).
+    Une chaîne est une séquence [S, ..., enemy] où :
+      - S est un ami proche de la reine (distance <= n) et S != enemy,
+      - Pour chaque lien, X complote contre Y (Y ∈ X.conspiration),
+      - Aucun personnage ne figure deux fois dans la chaîne,
+      - Et aucun personnage de la chaîne n'est présent dans used_set.
+    Retourne la chaîne sous forme de liste de noms (la chaîne la plus courte, et en cas d'égalité, la première en ordre alphabétique)
+    ou None si aucune chaîne n'existe.
     """
     possible_chains = []
-    # On parcourt tous les nœuds qui sont close friends de la reine
+    # On parcourt tous les nœuds close friends (distance <= n) de la reine qui ne sont pas déjà utilisés et différents de l'ennemi
     for node in graph.nodes:
         if node == enemy:
             continue
         if node not in dist_from_queen or dist_from_queen[node] > n:
             continue
-        # node est un ami proche, on effectue une recherche en largeur dans le graphe des complots
+        if node.name in used_set:
+            continue
+        # node est un ami proche et utilisable, on effectue une recherche en largeur dans le graphe des complots
         queue = deque()
         queue.append((node, [node]))
         while queue:
             current, path = queue.popleft()
             for neighbor in current.conspiration:
-                if neighbor in path:  # éviter les cycles
+                if neighbor in path or neighbor.name in used_set:
                     continue
                 new_path = path + [neighbor]
                 if neighbor == enemy:
@@ -221,7 +224,7 @@ def find_conspiracy_chain_for_enemy(graph: Graph, queenNode: Node, enemy: Node, 
                     queue.append((neighbor, new_path))
     if not possible_chains:
         return None
-    # Choisir la chaîne la plus courte, puis en cas d'égalité, la première en ordre alphabétique (par nom)
+    # Choisir la chaîne la plus courte, puis en cas d'égalité, la première en ordre alphabétique (par noms)
     possible_chains.sort(key=lambda p: (len(p), [node.name for node in p]))
     return [node.name for node in possible_chains[0]]
 
@@ -321,29 +324,35 @@ def plots(fr: str, cr: str, n: int):
     for node in graph.nodes:
         if queenNode in node.conspiration:
             direct_enemies.append(node)
-    # Éliminer d'éventuels doublons et trier par nom
+    # Tri alphabétique
     direct_enemies = sorted(set(direct_enemies), key=lambda node: node.name)
 
-    # Pour chaque ennemi direct, chercher la chaîne de complot depuis un ami proche (distance <= n)
-    chains = {}   # mapping enemy.name -> chaîne (liste de noms)
+    used_set = set()  # ensemble des noms déjà utilisés dans une chaîne
+    chains = {}      # mapping enemy.name -> chaîne (liste de noms)
     no_chain = set()
+
+    # Pour chaque ennemi direct, dans l'ordre alphabétique, on cherche une chaîne
     for enemy in direct_enemies:
-        chain = find_conspiracy_chain_for_enemy(graph, queenNode, enemy, n, dist_from_queen)
+        chain = find_conspiracy_chain_for_enemy(graph, enemy, n, dist_from_queen, used_set)
         if chain is not None:
             chains[enemy.name] = chain
+            # Marquer tous les personnages de la chaîne comme utilisés
+            for name in chain:
+                used_set.add(name)
         else:
             no_chain.add(enemy.name)
 
     print("Conspiracies:")
-    # Affichage des chaînes trouvées, triées d'abord par longueur puis par ordre lexicographique
-    sorted_chains = sorted(chains.values(), key=lambda c: (len(c), c))
-    for chain in sorted_chains:
-        print(" -> ".join(chain))
-    # Affichage des ennemis sans chaîne de complot
-    for enemy in sorted(no_chain):
-        print(f"No conspiracy possible against {enemy}")
+    # Affichage dans l'ordre : d'abord les chaînes trouvées, puis les ennemis sans chaîne
+    # Ici, on affiche chaque chaîne selon l'ordre de l'ennemi (alphabetique)
+    for enemy in sorted([node.name for node in direct_enemies]):
+        if enemy in chains:
+            print(" -> ".join(chains[enemy]))
+        else:
+            print(f"No conspiracy possible against {enemy}")
     print()
-    # Détermination du résultat global
+
+    # Si au moins un ennemi n'a pas de chaîne valide, la résolution globale échoue
     if no_chain:
         print("Result:")
         print("There is only one way out: treason!")
