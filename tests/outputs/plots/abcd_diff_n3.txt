@@ -15,7 +15,6 @@ Relationships:
 3 3 2 1 0
 
 Conspiracies:
-Person A -> Cersei Lannister
 Person D -> Person A
 
 Result:
