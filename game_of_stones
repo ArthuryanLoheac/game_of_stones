@@ -34,12 +34,12 @@ class ArgumentParser(argparse.ArgumentParser):
 
 class Node:
     """
-    Représente un personnage, ses amis et ceux qu'il complote contre.
+    Représente un personnage, ses amis et ceux contre qui il complote.
     """
     def __init__(self, name: str):
         self.name = name
         self.friends = []
-        self.conspiration = []
+        self.conspiration = []  # Liste des Node contre lesquels ce personnage complote
         self.depth = -1
 
     def add_friend(self, friend: 'Node'):
@@ -51,12 +51,12 @@ class Node:
         if self not in friend.friends:
             friend.friends.append(self)
 
-    def add_conspiration(self, conspiration: 'Node'):
-        """Ajoute un complot (orienté)."""
-        if conspiration.name == self.name:
-            raise ValueError("Cannot be conspiration with himself")
-        if conspiration not in self.conspiration:
-            self.conspiration.append(conspiration)
+    def add_conspiration(self, target: 'Node'):
+        """Ajoute un complot orienté : ce personnage complote contre target."""
+        if target.name == self.name:
+            raise ValueError("Cannot conspire against himself")
+        if target not in self.conspiration:
+            self.conspiration.append(target)
 
 class Graph:
     """
@@ -186,6 +186,45 @@ def bfs_all_distances(graph: Graph, start: Node) -> dict:
 
     return dist
 
+# ========== Recherche de chaîne de complot ==========
+
+def find_conspiracy_chain_for_enemy(graph: Graph, queenNode: Node, enemy: Node, n: int, dist_from_queen: dict) -> list:
+    """
+    Cherche une chaîne de complot depuis un ami proche de la reine (distance <= n)
+    jusqu'à l'ennemi direct.
+    Une chaîne est une séquence de personnages [S, ..., enemy] où :
+      - S est un ami proche de la reine (distance <= n) et S != enemy
+      - Pour chaque lien, X complote contre Y (Y ∈ X.conspiration)
+      - Aucun personnage ne figure deux fois dans la chaîne.
+    Retourne la chaîne sous forme de liste de noms (la chaîne la plus courte,
+    et en cas d'égalité, la première en ordre alphabétique) ou None si aucune chaîne n'existe.
+    """
+    possible_chains = []
+    # On parcourt tous les nœuds qui sont close friends de la reine
+    for node in graph.nodes:
+        if node == enemy:
+            continue
+        if node not in dist_from_queen or dist_from_queen[node] > n:
+            continue
+        # node est un ami proche, on effectue une recherche en largeur dans le graphe des complots
+        queue = deque()
+        queue.append((node, [node]))
+        while queue:
+            current, path = queue.popleft()
+            for neighbor in current.conspiration:
+                if neighbor in path:  # éviter les cycles
+                    continue
+                new_path = path + [neighbor]
+                if neighbor == enemy:
+                    possible_chains.append(new_path)
+                else:
+                    queue.append((neighbor, new_path))
+    if not possible_chains:
+        return None
+    # Choisir la chaîne la plus courte, puis en cas d'égalité, la première en ordre alphabétique (par nom)
+    possible_chains.sort(key=lambda p: (len(p), [node.name for node in p]))
+    return [node.name for node in possible_chains[0]]
+
 # ========== Modes ==========
 
 def links(fr: str, p1: str, p2: str, graph: Graph):
@@ -223,24 +262,22 @@ def plots(fr: str, cr: str, n: int):
         n2 = find_or_create(graph, pair[1])
         n1.add_friend(n2)
 
-    # 2) Lecture CR (complots)
+    # 2) Lecture du fichier de complots (CR)
     conspiracies_list = read_file(cr)
     if len(conspiracies_list) == 0:
         raise ValueError("Empty conspiracies file")
 
     listConspiracies = get_list_pair_conspiracy(conspiracies_list)
 
-    # On stocke la structure plotsAgainst: { "A": set(["B", ...]) } si A complote contre B
-    plotsAgainst = {}
+    # Intégration relationnelle des complots dans les nœuds
     for pair in listConspiracies:
         A, B = pair
-        # Vérifie si B existe dans FR (sinon => erreur)
-        if graph.find_node(B) is None:
-            print(f"An error occurred: {B} not found in friendships file", file=sys.stderr)
+        nodeA = graph.find_node(A)
+        nodeB = graph.find_node(B)
+        if nodeA is None or nodeB is None:
+            print(f"An error occurred: {A if nodeA is None else B} not found in friendships file", file=sys.stderr)
             sys.exit(84)
-        if A not in plotsAgainst:
-            plotsAgainst[A] = set()
-        plotsAgainst[A].add(B)
+        nodeA.add_conspiration(nodeB)
 
     # 3) Afficher la liste alphabétique des noms
     sorted_names = sorted(node.name for node in graph.nodes)
@@ -265,11 +302,10 @@ def plots(fr: str, cr: str, n: int):
         print(" ".join(row_parts))
     print()
 
-    # On cherche la reine pour calculer la distance BFS
+    # 5) Recherche de chaînes de complots
     queenName = "Cersei Lannister"
     queenNode = graph.find_node(queenName)
     if queenNode is None:
-        # S'il n'y a pas la reine dans FR, on ne peut pas appliquer la logique
         print("Conspiracies:")
         print("No queen in the graph => no resolution possible.")
         print()
@@ -277,74 +313,43 @@ def plots(fr: str, cr: str, n: int):
         print("There is only one way out: treason!")
         return
 
-    # Distances depuis la reine
+    # Calcul des distances depuis la reine (pour déterminer les close friends)
     dist_from_queen = bfs_all_distances(graph, queenNode)
 
-    # Identifie les ennemis directs (ceux qui complotent contre la reine)
+    # Identification des ennemis directs : ceux qui complotent directement contre la reine
     direct_enemies = []
-    for conspirator, targets in plotsAgainst.items():
-        if queenName in targets:
-            direct_enemies.append(conspirator)
+    for node in graph.nodes:
+        if queenNode in node.conspiration:
+            direct_enemies.append(node)
+    # Éliminer d'éventuels doublons et trier par nom
+    direct_enemies = sorted(set(direct_enemies), key=lambda node: node.name)
 
-    # Enlever les doublons par sécurité
-    direct_enemies = list(set(direct_enemies))
-    direct_enemies.sort()  # tri alphabétique, au besoin
-
-    # On va essayer de neutraliser chaque ennemi direct E
-    used_conspiracies = []  # liste de (X, E) signifiant "X -> E"
-    for E in direct_enemies:
-        # Cherche tous ceux qui complotent contre E
-        possible_conspirators = []
-        for X, targetsX in plotsAgainst.items():
-            if E in targetsX:
-                possible_conspirators.append(X)
-
-        if not possible_conspirators:
-            # Personne ne complote contre E => impossible à neutraliser
-            continue
-
-        # Sépare ceux qui NE sont PAS ennemis directs (prioritaires) et ceux qui le sont
-        non_enemies = [x for x in possible_conspirators if x not in direct_enemies]
-        if non_enemies:
-            # On trie par distance à la reine, puis ordre alphabétique
-            best = sorted(
-                non_enemies,
-                key=lambda x: (dist_from_queen.get(graph.find_node(x), 9999), x)
-            )[0]
+    # Pour chaque ennemi direct, chercher la chaîne de complot depuis un ami proche (distance <= n)
+    chains = {}   # mapping enemy.name -> chaîne (liste de noms)
+    no_chain = set()
+    for enemy in direct_enemies:
+        chain = find_conspiracy_chain_for_enemy(graph, queenNode, enemy, n, dist_from_queen)
+        if chain is not None:
+            chains[enemy.name] = chain
         else:
-            # On prend parmi les ennemis directs
-            best = sorted(
-                possible_conspirators,
-                key=lambda x: (dist_from_queen.get(graph.find_node(x), 9999), x)
-            )[0]
-
-        used_conspiracies.append((best, E))
-
-    # Vérifie si on a neutralisé tous les ennemis
-    neutralized_enemies = { e for (_, e) in used_conspiracies }
-    remaining = set(direct_enemies) - neutralized_enemies
+            no_chain.add(enemy.name)
 
     print("Conspiracies:")
-    if remaining:
-        # Au moins un ennemi direct non neutralisé => on ne peut pas sauver la couronne
-        # On peut afficher un diagnostic sommaire
-        for (x, e) in sorted(used_conspiracies, key=lambda t: (t[0], t[1])):
-            print(f"{x} -> {e}")
-        print(f"No conspiracy possible against: {', '.join(sorted(remaining))}")
-        print()
+    # Affichage des chaînes trouvées, triées d'abord par longueur puis par ordre lexicographique
+    sorted_chains = sorted(chains.values(), key=lambda c: (len(c), c))
+    for chain in sorted_chains:
+        print(" -> ".join(chain))
+    # Affichage des ennemis sans chaîne de complot
+    for enemy in sorted(no_chain):
+        print(f"No conspiracy possible against {enemy}")
+    print()
+    # Détermination du résultat global
+    if no_chain:
         print("Result:")
         print("There is only one way out: treason!")
-        return
     else:
-        # Tous neutralisés => on affiche la liste des conspirations dans l'ordre voulu
-        # Tri par nom du conspirateur (x)
-        used_conspiracies.sort(key=lambda t: (t[0], t[1]))
-        for (x, e) in used_conspiracies:
-            print(f"{x} -> {e}")
-        print()
         print("Result:")
         print("The stone is safe!")
-    # === /NEW
 
 def main() -> int:
     if len(sys.argv) != 5:
